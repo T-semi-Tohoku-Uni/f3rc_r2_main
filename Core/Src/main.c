@@ -22,11 +22,16 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct{
+	volatile int16_t x;
+	volatile int16_t y;
+	volatile float theta;
+}purpose;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -57,6 +62,10 @@ uint32_t TxMailbox;
 
 int16_t x = 0, y = 0;
 float theta = 0;
+
+purpose mokuhyo[1] = {
+		{20, 0, 0}
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -73,7 +82,7 @@ static void MX_TIM6_Init(void);
 /* USER CODE BEGIN 0 */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (htim == htim6){
-
+		float hensax = mokuhyo.x - x;
 }
 
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs){
