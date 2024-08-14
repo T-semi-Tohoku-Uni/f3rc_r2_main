@@ -45,7 +45,15 @@ FDCAN_HandleTypeDef hfdcan1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+FDCAN_TxHeaderTypeDef TxHeader;
+FDCAN_RxHeaderTypeDef RxHeader;
+FDCAN_FilterTypeDef sFilterConfig;
 
+uint8_t TxData[8] = {};
+uint8_t RxData[8] = {};
+uint32_t TxMailbox;
+
+int16_t x = 0, y = 0, theta = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -59,6 +67,65 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs){
+	if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET) {
+
+	        /* Retrieve Rx messages from RX FIFO0 */
+
+		if (HAL_FDCAN_GetRxMessage(&hfdcan1, FDCAN_RX_FIFO1, &RxHeader, RxData) != HAL_OK) {
+			printf("fdcan_getrxmessage is error\r\n");
+			Error_Handler();
+		}
+
+		if (RxHeader.Identifier == 0x400) {
+			x = (int16_t)((RxData[0] << 8) | RxData[1]);
+			y = (int16_t)((RxData[2] << 8) | RxData[3]);
+			theta = 0;
+		}
+	}
+}
+
+void FDCAN_RxTxSettings(void){
+	FDCAN_FilterTypeDef FDCAN_Filter_settings;
+	FDCAN_Filter_settings.IdType = FDCAN_STANDARD_ID;
+	FDCAN_Filter_settings.FilterIndex = 0;
+	FDCAN_Filter_settings.FilterType = FDCAN_FILTER_RANGE;
+	FDCAN_Filter_settings.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
+	FDCAN_Filter_settings.FilterID1 = 0x200;
+	FDCAN_Filter_settings.FilterID2 = 0x310;
+
+	TxHeader.Identifier = 0x000;
+	TxHeader.IdType = FDCAN_STANDARD_ID;
+	TxHeader.TxFrameType = FDCAN_DATA_FRAME;
+	TxHeader.DataLength = FDCAN_DLC_BYTES_8;
+	TxHeader.ErrorStateIndicator = FDCAN_ESI_ACTIVE;
+	TxHeader.BitRateSwitch = FDCAN_BRS_ON;
+	TxHeader.FDFormat = FDCAN_FD_CAN;
+	TxHeader.TxEventFifoControl = FDCAN_NO_TX_EVENTS;
+	TxHeader.MessageMarker = 0;
+
+
+	if (HAL_FDCAN_ConfigFilter(&hfdcan1, &FDCAN_Filter_settings) != HAL_OK){
+		printf("fdcan_configfilter is error\r\n");
+		Error_Handler();
+	}
+
+	if (HAL_FDCAN_ConfigGlobalFilter(&hfdcan1, FDCAN_REJECT, FDCAN_FILTER_REJECT, FDCAN_FILTER_REMOTE, FDCAN_FILTER_REMOTE) != HAL_OK){
+		printf("fdcan_configglobalfilter is error\r\n");
+		Error_Handler();
+	}
+
+	if (HAL_FDCAN_Start(&hfdcan1) != HAL_OK) {
+		printf("fdcan_start is error\r\n");
+		Error_Handler();
+	}
+
+	if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK){
+		printf("fdcan_activatenotification is error\r\n");
+		Error_Handler();
+	}
+}
+
 int _write(int file, char *ptr, int len)
 {
     HAL_UART_Transmit(&huart2,(uint8_t *)ptr,len,10);
@@ -98,7 +165,9 @@ int main(void)
   MX_FDCAN1_Init();
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
-
+  printf("start\r\n");
+  FDCAN_RxTxSettings();
+  printf("can_main_start\r\n");
   /* USER CODE END 2 */
 
   /* Infinite loop */
