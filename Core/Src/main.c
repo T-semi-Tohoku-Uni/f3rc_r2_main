@@ -42,6 +42,8 @@
 /* Private variables ---------------------------------------------------------*/
 FDCAN_HandleTypeDef hfdcan1;
 
+TIM_HandleTypeDef htim6;
+
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -62,12 +64,18 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM6_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if (htim == htim6){
+
+}
+
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs){
 	if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET) {
 
@@ -173,10 +181,12 @@ int main(void)
   MX_GPIO_Init();
   MX_FDCAN1_Init();
   MX_USART2_UART_Init();
+  MX_TIM6_Init();
   /* USER CODE BEGIN 2 */
   printf("start\r\n");
   FDCAN_RxTxSettings();
   printf("can_main_start\r\n");
+  HAL_TIM_Base_Start_IT(&htim6);
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -276,6 +286,44 @@ static void MX_FDCAN1_Init(void)
   /* USER CODE BEGIN FDCAN1_Init 2 */
 
   /* USER CODE END FDCAN1_Init 2 */
+
+}
+
+/**
+  * @brief TIM6 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM6_Init(void)
+{
+
+  /* USER CODE BEGIN TIM6_Init 0 */
+
+  /* USER CODE END TIM6_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM6_Init 1 */
+
+  /* USER CODE END TIM6_Init 1 */
+  htim6.Instance = TIM6;
+  htim6.Init.Prescaler = 9;
+  htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim6.Init.Period = 7999;
+  htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim6, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM6_Init 2 */
+
+  /* USER CODE END TIM6_Init 2 */
 
 }
 
