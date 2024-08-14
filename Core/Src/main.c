@@ -53,7 +53,8 @@ uint8_t TxData[8] = {};
 uint8_t RxData[8] = {};
 uint32_t TxMailbox;
 
-int16_t x = 0, y = 0, theta = 0;
+int16_t x = 0, y = 0;
+float theta = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -80,7 +81,15 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		if (RxHeader.Identifier == 0x400) {
 			x = (int16_t)((RxData[0] << 8) | RxData[1]);
 			y = (int16_t)((RxData[2] << 8) | RxData[3]);
-			theta = 0;
+			theta = (int8_t)RxData[6];
+			float theta_syf = (int16_t)((RxData[4] << 8) | RxData[5]);
+			theta_syf /= 10000;
+			if (theta >= 0) {
+				theta += theta_syf;
+			}
+			else {
+				theta -= theta_syf;
+			}
 		}
 	}
 }
@@ -92,7 +101,7 @@ void FDCAN_RxTxSettings(void){
 	FDCAN_Filter_settings.FilterType = FDCAN_FILTER_RANGE;
 	FDCAN_Filter_settings.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
 	FDCAN_Filter_settings.FilterID1 = 0x200;
-	FDCAN_Filter_settings.FilterID2 = 0x310;
+	FDCAN_Filter_settings.FilterID2 = 0x500;
 
 	TxHeader.Identifier = 0x000;
 	TxHeader.IdType = FDCAN_STANDARD_ID;
