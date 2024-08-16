@@ -31,6 +31,9 @@ typedef struct{
 	volatile int16_t x;
 	volatile int16_t y;
 	volatile float theta;
+	volatile float indx;
+	volatile float indy;
+	volatile float indt;
 }purpose;
 /* USER CODE END PTD */
 
@@ -63,9 +66,12 @@ uint32_t TxMailbox;
 int16_t x = 0, y = 0;
 float theta = 0;
 
+float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[1] = {
-		{20, 0, 0}
+		{20, 0, 0, 0, 0, 0}
 };
+
+volatile int16_t vx = 0, vy = 0, omega = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -83,6 +89,25 @@ static void MX_TIM6_Init(void);
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (htim == htim6){
 		float hensax = mokuhyo.x - x;
+		float dx = x - p_x;
+		indx += hensax;
+		vx = (int16_t)(k_p*hensax + k_i*indx + k_d*dx);
+
+		p_x = x;
+
+		float hensay = mokuhyo.y -y;
+		float dy = y - p_y;
+		indy += hensay;
+		vy = (int16_t)(k_p*hensay + k_i*indy + k_d*dy);
+
+		p_y = y;
+
+		float hensat = mokuhyo.theta - theta;
+		float dt = theta - p_t;
+		indt += hensat;
+		omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
+
+		p_t = theta;
 }
 
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs){
