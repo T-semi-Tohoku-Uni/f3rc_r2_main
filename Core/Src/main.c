@@ -57,6 +57,9 @@ uint32_t TxMailbox;
 
 int16_t x = 0, y = 0;
 float theta = 0;
+
+int8_t status = 0;
+int16_t status_id = 0x100;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -108,7 +111,7 @@ void FDCAN_RxTxSettings(void){
 	FDCAN_Filter_settings.FilterIndex = 0;
 	FDCAN_Filter_settings.FilterType = FDCAN_FILTER_RANGE;
 	FDCAN_Filter_settings.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	FDCAN_Filter_settings.FilterID1 = 0x200;
+	FDCAN_Filter_settings.FilterID1 = 0x100;
 	FDCAN_Filter_settings.FilterID2 = 0x500;
 
 	TxHeader.Identifier = 0x000;
@@ -139,6 +142,17 @@ void FDCAN_RxTxSettings(void){
 
 	if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK){
 		printf("fdcan_activatenotification is error\r\n");
+		Error_Handler();
+	}
+}
+
+void status_Rx(int8_t st){
+	TxHeader.Identifier = status_id;
+	uint8_t TxData_status[8];
+	TxData_status[0] = st;
+
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_status) =! HAL_OK) {
+		printf("addmassage_status is error\r\n");
 		Error_Handler();
 	}
 }
