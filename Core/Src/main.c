@@ -71,9 +71,10 @@ purpose mokuhyo[1] = {
 		{20, 0, 0, 0, 0, 0}
 };
 
-volatile int16_t vx = 0, vy = 0, omega = 0;
+volatile int16_t vx = 0, vy = 0;//mm/s
+volatile float omega = 0;
 int8_t status = 0;
-int16_t status_id = 0x100;
+int16_t status_id = 0x100, vel_id = 0x300;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -88,29 +89,7 @@ static void MX_TIM6_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if (htim == htim6){
-		float hensax = mokuhyo.x - x;
-		float dx = x - p_x;
-		indx += hensax;
-		vx = (int16_t)(k_p*hensax + k_i*indx + k_d*dx);
 
-		p_x = x;
-
-		float hensay = mokuhyo.y -y;
-		float dy = y - p_y;
-		indy += hensay;
-		vy = (int16_t)(k_p*hensay + k_i*indy + k_d*dy);
-
-		p_y = y;
-
-		float hensat = mokuhyo.theta - theta;
-		float dt = theta - p_t;
-		indt += hensat;
-		omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
-
-		p_t = theta;
-}
 
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs){
 	if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET) {
@@ -181,13 +160,68 @@ void FDCAN_RxTxSettings(void){
 
 void status_Rx(int8_t st){
 	TxHeader.Identifier = status_id;
-	uint8_t TxData_status[8];
+	uint8_t TxData_status[8] = {};
 	TxData_status[0] = st;
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_status) =! HAL_OK) {
 		printf("addmassage_status is error\r\n");
 		Error_Handler();
 	}
+}
+void vel_Rx(int16_t V_X, int16_t V_Y, float Omega){
+	TxHeader.Identifier = vel_id;
+	uint8_t TxData_vel[8] = {};
+	uint16_t Omega_syi;
+	uint8_t Omega_se;
+	if (Omega > 0){
+		Omega_se = (int16_t)Omega;
+		float Omega_syf = Omega - (int16_t)Omega;
+		Omega_syi = (uint16_t)(Omega_syf*10000);
+	}
+	else{
+		Omega_se = (int16_t)Omega;
+		float Omega_k = -Omega;
+		float Omega_syf = Omega_k - (int16_t)Omega_k;
+		Omega_syi = (uint16_t)(Omega_syf*10000);
+
+	}
+
+
+	TxData_vel[0] = (int16_t)(V_X) >> 8;
+	TxData_vel[1] = (uint8_t)((int16_t)(V_X) & 0xff);
+	TxData_vel[2] = (int16_t)(V_Y) >> 8;
+	TxData_vel[3] = (uint8_t)((int16_t)(V_Y) & 0xff);
+	TxData_vel[4] = (int16_t)(Omega_syi) >> 8;
+	TxData_vel[5] = (uint8_t)((int16_t)(Omega_syi) & 0xff);
+	TxData_vel[6] = Omega_se;
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_vel) != HAL_OK){
+		printf("add_message_vel is error\r\n");
+		Error_Handler();
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if (htim == &htim6){
+		float hensax = mokuhyo.x - x;
+		float dx = x - p_x;
+		indx += hensax;
+		vx = (int16_t)(k_p*hensax + k_i*indx + k_d*dx);
+
+		p_x = x;
+
+		float hensay = mokuhyo.y -y;
+		float dy = y - p_y;
+		indy += hensay;
+		vy = (int16_t)(k_p*hensay + k_i*indy + k_d*dy);
+
+		p_y = y;
+
+		float hensat = mokuhyo.theta - theta;
+		float dt = theta - p_t;
+		indt += hensat;
+		omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
+
+		p_t = theta;
 }
 
 int _write(int file, char *ptr, int len)
