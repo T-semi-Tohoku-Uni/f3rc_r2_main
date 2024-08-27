@@ -203,6 +203,7 @@ void vel_Rx(int16_t V_X, int16_t V_Y, float Omega){
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (htim == &htim6){
+		/*
 		if (0 == status){
 
 		}
@@ -226,7 +227,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		indt += hensat;
 		omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
 
-		p_t = theta;
+		p_t = theta;*/
+	}
 }
 
 int _write(int file, char *ptr, int len)
