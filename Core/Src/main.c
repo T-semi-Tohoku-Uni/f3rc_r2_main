@@ -72,7 +72,7 @@ purpose mokuhyo[1] = {
 };
 float indx = 0, indy = 0, indt = 0;
 
-volatile int16_t vx = 0, vy = 0;//mm/s
+volatile int16_t vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
 int8_t status = 0;
 int16_t status_id = 0x100, vel_id = 0x300;
