@@ -159,10 +159,11 @@ void FDCAN_RxTxSettings(void){
 	}
 }
 
-void status_Rx(int8_t st){
+void status_Rx(int8_t st, uint8_t sub_st){
 	TxHeader.Identifier = status_id;
 	uint8_t TxData_status[8] = {};
 	TxData_status[0] = st;
+	TxData_status[1] = sub_st;
 
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_status) != HAL_OK) {
 		printf("addmassage_status is error\r\n");
