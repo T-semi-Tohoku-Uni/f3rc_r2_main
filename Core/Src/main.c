@@ -69,12 +69,12 @@ float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[1] = {
-		{20, 0, 0, 0, 0, 0}
+		{0, 2400, 0, 0, 0, 0}
 };
 
 volatile int16_t vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
-uint8_t state = 0;
+uint8_t state = 2;
 uint8_t mv_state = 2;
 int16_t state_id = 0x100, vel_id = 0x300;
 /* USER CODE END PV */
