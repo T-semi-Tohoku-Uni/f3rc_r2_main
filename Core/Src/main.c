@@ -48,6 +48,9 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+const uint8_t mv_state = 2;
+const int16_t state_id = 0x100, vel_id = 0x300;
+
 FDCAN_HandleTypeDef hfdcan1;
 
 TIM_HandleTypeDef htim6;
@@ -75,8 +78,7 @@ purpose mokuhyo[1] = {
 volatile int16_t vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
 uint8_t state = 0;
-uint8_t mv_state = 2;
-int16_t state_id = 0x100, vel_id = 0x300;
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -207,7 +209,6 @@ void vel_Rx(int16_t V_X, int16_t V_Y, float Omega){
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (&htim6 == htim) {
-
 		if (mv_state == state){
 			float k_p = 0, k_i = 0, k_d = 0;
 			float hensax = mokuhyo[0].x - x;
