@@ -39,7 +39,7 @@ typedef struct{
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PI 3.1415
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -69,10 +69,10 @@ float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[1] = {
-		{0, 2400, 0, 0, 0, 0}
+		{0, 0, PI/2, 0, 0, 0}
 };
 
-volatile int16_t vx = 0, vy = 0;//mm/ms
+volatile float vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
 uint8_t state = 2;
 uint8_t mv_state = 2;
@@ -105,17 +105,19 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		}
 
 		if (RxHeader.Identifier == 0x400) {
+			//printf("canlive");
 			x = (int16_t)((RxData[0] << 8) | RxData[1]);
 			y = (int16_t)((RxData[2] << 8) | RxData[3]);
-			theta = (int8_t)RxData[6];
-			float theta_syf = (int16_t)((RxData[4] << 8) | RxData[5]);
-			theta_syf /= 10000;
-			if (theta >= 0) {
-				theta += theta_syf;
-			}
-			else {
-				theta -= theta_syf;
-			}
+			theta = (int16_t)((RxData[4] << 8) | RxData[5]);
+//			float theta_syf = (int16_t)((RxData[4] << 8) | RxData[5]);
+//			theta_syf /= 10000;
+//			if (theta >= 0) {
+//				theta += theta_syf;
+//			}
+//			else {
+//				theta -= theta_syf;
+//			}
+			theta /= 400;
 		}
 	}
 }
@@ -173,32 +175,35 @@ void state_Rx(int8_t st, uint8_t sub_st){
 	}
 }
 
-void vel_Rx(int16_t V_X, int16_t V_Y, float Omega){
+void vel_Rx(int16_t V_X, int16_t V_Y, int16_t Omega){
 	TxHeader.Identifier = vel_id;
 	uint8_t TxData_vel[8] = {};
-	uint16_t Omega_syi;
-	uint8_t Omega_se;
-	if (Omega > 0){
-		Omega_se = (int16_t)Omega;
-		float Omega_syf = Omega - (int16_t)Omega;
-		Omega_syi = (uint16_t)(Omega_syf*10000);
-	}
-	else{
-		Omega_se = (int16_t)Omega;
-		float Omega_k = -Omega;
-		float Omega_syf = Omega_k - (int16_t)Omega_k;
-		Omega_syi = (uint16_t)(Omega_syf*10000);
 
-	}
+//	uint16_t Omega_syi;
+//	uint8_t Omega_se;
+//	if (Omega > 0){
+//		Omega_se = (int16_t)Omega;
+//		float Omega_syf = Omega - (int16_t)Omega;
+//		Omega_syi = (uint16_t)(Omega_syf*10000);
+//	}
+//	else{
+//		Omega_se = (int16_t)Omega;
+//		float Omega_k = -Omega;
+//		float Omega_syf = Omega_k - (int16_t)Omega_k;
+//		Omega_syi = (uint16_t)(Omega_syf*10000);
+//
+//	}
 
 
 	TxData_vel[0] = (int16_t)(V_X) >> 8;
 	TxData_vel[1] = (uint8_t)((int16_t)(V_X) & 0xff);
 	TxData_vel[2] = (int16_t)(V_Y) >> 8;
 	TxData_vel[3] = (uint8_t)((int16_t)(V_Y) & 0xff);
-	TxData_vel[4] = (int16_t)(Omega_syi) >> 8;
-	TxData_vel[5] = (uint8_t)((int16_t)(Omega_syi) & 0xff);
-	TxData_vel[6] = Omega_se;
+	TxData_vel[4] = (int16_t)(Omega) >> 8;
+	TxData_vel[5] = (uint8_t)((int16_t)(Omega) & 0xff);
+	//TxData_vel[6] = Omega_se;
+	//printf("%d\r\n",TxData_vel[3]);
+
 	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_vel) != HAL_OK){
 		printf("add_message_vel is error\r\n");
 		Error_Handler();
@@ -209,34 +214,42 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (&htim6 == htim) {
 
 		if (mv_state == state){
-			float k_p = 0, k_i = 0, k_d = 0;
+			float k_p = 0.001, k_i = 0, k_d = 0;
+			float k_p_t = 0.1, k_i_t = 0, k_d_t = 0;
 			float hensax = mokuhyo[0].x - x;
-			float dx = x - p_x;
+			float dx = (float)x - p_x;
 			mokuhyo[0].indx += hensax;
-			vx = (int16_t)(k_p*hensax + k_i*mokuhyo[0].indx + k_d*dx);
+			vx = (k_p*hensax + k_i*mokuhyo[0].indx + k_d*dx);
 
 			p_x = x;
 
 			float hensay = mokuhyo[0].y -y;
-			float dy = y - p_y;
+			float dy = (float)y - p_y;
 			mokuhyo[0].indy += hensay;
-			vy = (int16_t)(k_p*hensay + k_i*mokuhyo[0].indy + k_d*dy);
+			vy = (k_p*hensay + k_i*mokuhyo[0].indy + k_d*dy);
+			//int Dy=vy*1000;
+			//printf("dy:%d\r\n",Dy);
 
 			p_y = y;
 
 			float hensat = mokuhyo[0].theta - theta;
 			float dt = theta - p_t;
 			mokuhyo[0].indt += hensat;
-			omega = (int16_t)(k_p*hensat + k_i*mokuhyo[0].indt + k_d*dt);
+			omega =(k_p_t*hensat + k_i_t*mokuhyo[0].indt + k_d_t*dt);
 
 			p_t = theta;
+			//printf("%d\r\n", (int)(omega*100));
 		}
 		else{
 			vx = 0;
 			vy = 0;
 			omega = 0;
 		}
-		vel_Rx(vx, vy, omega);
+		int16_t vx_tusin = (int16_t)(vx * 1000);
+		int16_t vy_tusin = (int16_t)(vy * 1000);
+		int16_t omega_tusin = (int16_t)(omega * 400);
+		vel_Rx(vx_tusin, vy_tusin, omega_tusin);
+
 	}
 
 	if (&htim7 == htim) {
@@ -299,6 +312,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  //printf("x: %d,y: %d\r\n",x,y);
+	  //printf("dy: %f\r\n",dy);
+	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
+	  //printf("%d\r\n", (int)(omega*100));
+	  HAL_Delay(1);
   }
   /* USER CODE END 3 */
 }
