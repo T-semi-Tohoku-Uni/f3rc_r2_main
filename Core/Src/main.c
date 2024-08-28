@@ -70,7 +70,6 @@ float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[1] = {
 		{20, 0, 0, 0, 0, 0}
 };
-float indx = 0, indy = 0, indt = 0;
 
 volatile int16_t vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
@@ -211,22 +210,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			float k_p = 0, k_i = 0, k_d = 0;
 			float hensax = mokuhyo[0].x - x;
 			float dx = x - p_x;
-			indx += hensax;
-			vx = (int16_t)(k_p*hensax + k_i*indx + k_d*dx);
+			mokuhyo[0].indx += hensax;
+			vx = (int16_t)(k_p*hensax + k_i*mokuhyo[0].indx + k_d*dx);
 
 			p_x = x;
 
 			float hensay = mokuhyo[0].y -y;
 			float dy = y - p_y;
-			indy += hensay;
-			vy = (int16_t)(k_p*hensay + k_i*indy + k_d*dy);
+			mokuhyo[0].indy += hensay;
+			vy = (int16_t)(k_p*hensay + k_i*mokuhyo[0].indy + k_d*dy);
 
 			p_y = y;
 
 			float hensat = mokuhyo[0].theta - theta;
 			float dt = theta - p_t;
-			indt += hensat;
-			omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
+			mokuhyo[0].indt += hensat;
+			omega = (int16_t)(k_p*hensat + k_i*mokuhyo[0].indt + k_d*dt);
 
 			p_t = theta;
 		}
