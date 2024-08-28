@@ -74,8 +74,9 @@ float indx = 0, indy = 0, indt = 0;
 
 volatile int16_t vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
-int8_t status = 0;
-int16_t status_id = 0x100, vel_id = 0x300;
+uint8_t state = 0;
+uint8_t mv_state = 2;
+int16_t state_id = 0x100, vel_id = 0x300;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -159,17 +160,18 @@ void FDCAN_RxTxSettings(void){
 	}
 }
 
-void status_Rx(int8_t st, uint8_t sub_st){
-	TxHeader.Identifier = status_id;
-	uint8_t TxData_status[8] = {};
-	TxData_status[0] = st;
-	TxData_status[1] = sub_st;
+void state_Rx(int8_t st, uint8_t sub_st){
+	TxHeader.Identifier = state_id;
+	uint8_t TxData_state[8] = {};
+	TxData_state[0] = st;
+	TxData_state[1] = sub_st;
 
-	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_status) != HAL_OK) {
-		printf("addmassage_status is error\r\n");
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_state) != HAL_OK) {
+		printf("addmassage_state is error\r\n");
 		Error_Handler();
 	}
 }
+
 void vel_Rx(int16_t V_X, int16_t V_Y, float Omega){
 	TxHeader.Identifier = vel_id;
 	uint8_t TxData_vel[8] = {};
@@ -204,31 +206,36 @@ void vel_Rx(int16_t V_X, int16_t V_Y, float Omega){
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (htim == &htim6){
-		/*
-		if (0 == status){
 
+		if (mv_state == state){
+			float k_p = 0, k_i = 0, k_d = 0;
+			float hensax = mokuhyo[0].x - x;
+			float dx = x - p_x;
+			indx += hensax;
+			vx = (int16_t)(k_p*hensax + k_i*indx + k_d*dx);
+
+			p_x = x;
+
+			float hensay = mokuhyo[0].y -y;
+			float dy = y - p_y;
+			indy += hensay;
+			vy = (int16_t)(k_p*hensay + k_i*indy + k_d*dy);
+
+			p_y = y;
+
+			float hensat = mokuhyo[0].theta - theta;
+			float dt = theta - p_t;
+			indt += hensat;
+			omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
+
+			p_t = theta;
 		}
-
-		float hensax = mokuhyo[0].x - x;
-		float dx = x - p_x;
-		indx += hensax;
-		vx = (int16_t)(k_p*hensax + k_i*indx + k_d*dx);
-
-		p_x = x;
-
-		float hensay = mokuhyo[0].y -y;
-		float dy = y - p_y;
-		indy += hensay;
-		vy = (int16_t)(k_p*hensay + k_i*indy + k_d*dy);
-
-		p_y = y;
-
-		float hensat = mokuhyo[0].theta - theta;
-		float dt = theta - p_t;
-		indt += hensat;
-		omega = (int16_t)(k_p*hensat + k_i*indt + k_d*dt);
-
-		p_t = theta;*/
+		else{
+			vx = 0;
+			vy = 0;
+			omega = 0;
+		}
+		vel_Rx(vx, vy, omega);
 	}
 }
 
