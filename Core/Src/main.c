@@ -22,7 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
-
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -280,20 +280,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (1 == state) {
 			if (NULL) {
-				if (1000 <= t)
+				if (1000 <= t){
 					if (NULL){
 						t = 0;
 						state = 2;
 						sub_state = 0;
 					}
+				}
+				else {
+					t++;
+				}
 			}
 			else {
 				t++;
 			}
 		}
 		else if (2 == state) {
-			state = 3;
-			sub_state = 0;
+			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50)) && (fabsf(theta-mokuhyo[sub_state].theta < 0.1))){
+				state = 3;
+				sub_state = 0;
+			}
 		}
 		else if (128 == state) {
 			HAL_GPIO_WritePin(Boad_LED_GPIO_Port, Boad_LED_Pin, GPIO_PIN_SET);
