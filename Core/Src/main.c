@@ -71,13 +71,16 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[1] = {
-		{0, 0, PI/2, 0, 0, 0}
+purpose mokuhyo[3] = {
+		{0, 0, 0, 0, 0, 0},//toppings 1
+		{0, 0, 0, 0, 0, 0},//toppings 2
+		{0, 0, 0, 0, 0, 0}//oke(dish)
 };
 
 volatile float vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
 uint8_t state = 0;
+uint8_t sub_state = 0;
 
 /* USER CODE END PV */
 
@@ -215,28 +218,29 @@ void vel_Rx(int16_t V_X, int16_t V_Y, int16_t Omega){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (&htim6 == htim) {
 		if (mv_state == state){
+			uint8_t m_state = sub_state;
 			float k_p = 0.001, k_i = 0, k_d = 0;
 			float k_p_t = 0.1, k_i_t = 0, k_d_t = 0;
-			float hensax = mokuhyo[0].x - x;
+			float hensax = mokuhyo[m_state].x - x;
 			float dx = (float)x - p_x;
-			mokuhyo[0].indx += hensax;
-			vx = (k_p*hensax + k_i*mokuhyo[0].indx + k_d*dx);
+			mokuhyo[m_state].indx += hensax;
+			vx = (k_p*hensax + k_i*mokuhyo[m_state].indx + k_d*dx);
 
 			p_x = x;
 
-			float hensay = mokuhyo[0].y -y;
+			float hensay = mokuhyo[m_state].y -y;
 			float dy = (float)y - p_y;
-			mokuhyo[0].indy += hensay;
-			vy = (k_p*hensay + k_i*mokuhyo[0].indy + k_d*dy);
+			mokuhyo[m_state].indy += hensay;
+			vy = (k_p*hensay + k_i*mokuhyo[m_state].indy + k_d*dy);
 			//int Dy=vy*1000;
 			//printf("dy:%d\r\n",Dy);
 
 			p_y = y;
 
-			float hensat = mokuhyo[0].theta - theta;
+			float hensat = mokuhyo[m_state].theta - theta;
 			float dt = theta - p_t;
-			mokuhyo[0].indt += hensat;
-			omega =(k_p_t*hensat + k_i_t*mokuhyo[0].indt + k_d_t*dt);
+			mokuhyo[m_state].indt += hensat;
+			omega =(k_p_t*hensat + k_i_t*mokuhyo[m_state].indt + k_d_t*dt);
 
 			p_t = theta;
 			//printf("%d\r\n", (int)(omega*100));
@@ -254,7 +258,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	}
 
 	if (&htim7 == htim) {
-
+		if (0 == state) {
+			if (none){
+				//switch
+				state = 1;
+			}
+		}
+		state_Rx(state, sub_state);
 	}
 }
 
