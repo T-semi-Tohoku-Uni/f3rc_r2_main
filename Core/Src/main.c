@@ -245,6 +245,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			p_t = theta;
 			//printf("%d\r\n", (int)(omega*100));
 		}
+		if (kaishu_state == state) {
+			vx = 0;
+			vy = 0.05;
+			omega = 0;
+		}
+
 		else{
 			vx = 0;
 			vy = 0;
@@ -262,7 +268,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (none){
 				//switch
 				state = 1;
+				substate = 0;
 			}
+		}
+		else if (1 == state) {
+			if (none) {
+				state = 2;
+				substate = 0;
+			}
+		}
+		else if (2 == state) {
+			state = 3;
+			substate = 0;
+		}
+		else if (128 == state) {
+
+		}
+		else {
+			state = 128;
+			sub_state = 128;
 		}
 		state_Rx(state, sub_state);
 	}
