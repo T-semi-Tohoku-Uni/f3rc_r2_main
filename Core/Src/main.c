@@ -281,7 +281,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (1 == state) {
 			if (NULL) {
-				if (1000 <= t){
+				if (10000 <= t){
 					if (NULL){
 						t = 0;
 						state = 2;
@@ -298,16 +298,111 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (2 == state) {
 			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50)) && (fabsf(theta-mokuhyo[sub_state].theta < 0.1))){
-				state = 3;
-				sub_state = 0;
+				if (0 == sub_state) {
+					state = 3;
+					sub_state = 0;
+				}
+				else if (1 == sub_state) {
+					state = 4;
+					sub_state = 2;
+				}
+				else if (2 == sub_state) {
+					state = 3;
+					sub_state = 1;
+				}
+				else if (3 == sub_state) {
+					state = 4;
+					sub_state = 6;
+				}
+				else if (4 == sub_state) {
+					state = 5;
+					sub_state = 0;
+				}
+				else {
+					state = 128;
+					sub_state = 128;
+				}
 			}
 		}
 		else if (3 == state) {
-			if (NULL){
-				state = 2;
-				sub_state = 1;
+			if (0 == sub_state){
+				if (NULL) {
+					state = 4;
+					sub_state = 0;
+				}
+			}
+			else if (1 == sub_state) {
+				if (NULL) {
+					state = 4;
+					sub_state = 4;
+				}
+			}
+			else {
+				state = 128;
+				sub_state = 128;
 			}
 		}
+		else if (4 == state) {
+			if (0 == sub_state) {
+				if (NULL){
+					state = 4;
+					sub_state = 1;
+				}
+			}
+			else if (1 == sub_state) {
+				if (NULL) {
+					state = 2;
+					sub_state = 1;
+				}
+			}
+			else if (2 == sub_state) {
+				if (NULL) {
+					state = 4;
+					sub_state = 3;
+				}
+			}
+			else if (3 == sub_state) {
+				if (NULL) {
+					state = 2;
+					sub_state = 2;
+				}
+			}
+			else if (4 == sub_state) {
+				if (NULL) {
+					state = 4;
+					sub_state = 4;
+				}
+			}
+			else if (5 == sub_state) {
+				if (NULL) {
+					state = 2;
+					sub_state = 3;
+				}
+			}
+			else if (6 == sub_state) {
+				if (NULL) {
+					state = 2;
+					sub_state = 4;
+				}
+			}
+			else {
+				state = 128;
+				sub_state = 128;
+			}
+		}
+		else if (5 == state) {
+			if (NULL) {//raspberry pi
+				state = 6;
+				sub_state = 0;
+			}
+		}
+		else if (6 == sub_state) {
+			if (NULL) {//finish open
+				state = 128;
+				sub_state = 128;
+			}
+		}
+
 		else if (128 == state) {
 			HAL_GPIO_WritePin(Boad_LED_GPIO_Port, Boad_LED_Pin, GPIO_PIN_SET);
 		}
