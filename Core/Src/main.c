@@ -48,7 +48,7 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-const uint8_t mv_state = 2;
+const uint8_t mv_state = 2, kaishu_state = 3;
 const int16_t state_id = 0x100, vel_id = 0x300;
 
 FDCAN_HandleTypeDef hfdcan1;
@@ -82,6 +82,8 @@ volatile float omega = 0;
 uint8_t state = 0;
 uint8_t sub_state = 0;
 
+
+uint16_t t = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -251,6 +253,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			omega = 0;
 		}
 
+		if (128 == state) {
+			vx = 0;
+			vy = 0;
+			omega = 0;
+		}
 		else{
 			vx = 0;
 			vy = 0;
@@ -265,24 +272,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 
 	if (&htim7 == htim) {
 		if (0 == state) {
-			if (none){
+			if (NULL){
 				//switch
 				state = 1;
-				substate = 0;
+				sub_state = 0;
 			}
 		}
 		else if (1 == state) {
-			if (none) {
-				state = 2;
-				substate = 0;
+			if (NULL) {
+				if (1000 <= t)
+					if (NULL){
+						t = 0;
+						state = 2;
+						sub_state = 0;
+					}
+			}
+			else {
+				t++;
 			}
 		}
 		else if (2 == state) {
 			state = 3;
-			substate = 0;
+			sub_state = 0;
 		}
 		else if (128 == state) {
-
+			HAL_GPIO_WritePin(Boad_LED_GPIO_Port, Boad_LED_Pin, GPIO_PIN_SET);
 		}
 		else {
 			state = 128;
