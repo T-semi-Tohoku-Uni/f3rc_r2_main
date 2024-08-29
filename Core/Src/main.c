@@ -75,6 +75,7 @@ purpose mokuhyo[4] = {
 		{0, 0, 0, 0, 0, 0},//toppings 1
 		{0, 0, 0, 0, 0, 0},//starting point
 		{0, 0, 0, 0, 0, 0},//toppings 2
+		{0, 0, 0, 0, 0, 0},//oke x
 		{0, 0, 0, 0, 0, 0}//oke(dish)
 };
 
