@@ -82,7 +82,7 @@ volatile float vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
 uint8_t state = 0;
 uint8_t sub_state = 0;
-
+uint8_t hantei_4 = 0;
 
 uint16_t t = 0;
 /* USER CODE END PV */
@@ -117,6 +117,7 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 			x = (int16_t)((RxData[0] << 8) | RxData[1]);
 			y = (int16_t)((RxData[2] << 8) | RxData[3]);
 			theta = (int16_t)((RxData[4] << 8) | RxData[5]);
+			hantei_4 = RxData[6];
 //			float theta_syf = (int16_t)((RxData[4] << 8) | RxData[5]);
 //			theta_syf /= 10000;
 //			if (theta >= 0) {
