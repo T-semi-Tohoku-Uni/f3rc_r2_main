@@ -48,7 +48,7 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-const uint8_t mv_state = 2, kaishu_state = 3;
+const uint8_t mv_state = 2, kaishu_state = 3, reset_state = 4;
 const int16_t state_id = 0x100, vel_id = 0x300;
 
 FDCAN_HandleTypeDef hfdcan1;
@@ -248,13 +248,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			p_t = theta;
 			//printf("%d\r\n", (int)(omega*100));
 		}
-		if (kaishu_state == state) {
+		else if (kaishu_state == state) {
 			vx = 0;
 			vy = 0.05;
 			omega = 0;
 		}
+		else if (reset_state == state) {
+			if (0 == sub_state || 2 == sub_state || 4 == sub_state || 6 == sub_state){
+				vx = 0;
+				vy = 0.05;
+				omega = 0;
+			}
+			if (1 == sub_state || 3 == sub_state || 5 == sub_state) {
+				vx = 0.05;
+				vy = 0;
+				omega = 0;
+			}
+		}
 
-		if (128 == state) {
+		else if (128 == state) {
 			vx = 0;
 			vy = 0;
 			omega = 0;
