@@ -71,7 +71,7 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[4] = {
+purpose mokuhyo[5] = {
 		{0, 0, 0, 0, 0, 0},//toppings 1
 		{0, 0, 0, 0, 0, 0},//starting point
 		{0, 0, 0, 0, 0, 0},//toppings 2
@@ -85,7 +85,8 @@ uint8_t state = 0;
 uint8_t sub_state = 0;
 uint8_t hantei_4 = 0;
 
-uint16_t t = 0;
+uint16_t t_1 = 0;
+uint16_t t_3 = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -295,19 +296,19 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (1 == state) {
 			if (NULL) {
-				if (10000 <= t){
+				if (10000 <= t_1){
 					if (NULL){
-						t = 0;
+						t_1 = 0;
 						state = 2;
 						sub_state = 0;
 					}
 				}
 				else {
-					t++;
+					t_1++;
 				}
 			}
 			else {
-				t++;
+				t_1++;
 			}
 		}
 		else if (2 == state) {
@@ -340,15 +341,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (3 == state) {
 			if (0 == sub_state){
-				if (NULL) {
+				if (t_3 > 10000) {
+					t_3 = 0;
 					state = 4;
 					sub_state = 0;
 				}
+				else {
+					t_3++;
+				}
 			}
 			else if (1 == sub_state) {
-				if (NULL) {
+				if (t_3 > 10000) {
+					t_3 = 0;
 					state = 4;
 					sub_state = 4;
+				}
+				else {
+					t_3++;
 				}
 			}
 			else {
@@ -358,43 +367,43 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (4 == state) {
 			if (0 == sub_state) {
-				if (NULL){
+				if (1 == hantei_4){
 					state = 4;
 					sub_state = 1;
 				}
 			}
 			else if (1 == sub_state) {
-				if (NULL) {
+				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 1;
 				}
 			}
 			else if (2 == sub_state) {
-				if (NULL) {
+				if (1 == hantei_4) {
 					state = 4;
 					sub_state = 3;
 				}
 			}
 			else if (3 == sub_state) {
-				if (NULL) {
+				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 2;
 				}
 			}
 			else if (4 == sub_state) {
-				if (NULL) {
+				if (1 == hantei_4) {
 					state = 4;
 					sub_state = 4;
 				}
 			}
 			else if (5 == sub_state) {
-				if (NULL) {
+				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 3;
 				}
 			}
 			else if (6 == sub_state) {
-				if (NULL) {
+				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 4;
 				}
@@ -487,6 +496,7 @@ int main(void)
 	  //printf("dy: %f\r\n",dy);
 	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
 	  //printf("%d\r\n", (int)(omega*100));
+	  printf("%d, %d\r\n", state, sub_state);
 	  HAL_Delay(1);
   }
   /* USER CODE END 3 */
