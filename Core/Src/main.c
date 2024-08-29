@@ -71,8 +71,9 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[3] = {
+purpose mokuhyo[4] = {
 		{0, 0, 0, 0, 0, 0},//toppings 1
+		{0, 0, 0, 0, 0, 0},//starting point
 		{0, 0, 0, 0, 0, 0},//toppings 2
 		{0, 0, 0, 0, 0, 0}//oke(dish)
 };
@@ -299,6 +300,12 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50)) && (fabsf(theta-mokuhyo[sub_state].theta < 0.1))){
 				state = 3;
 				sub_state = 0;
+			}
+		}
+		else if (3 == state) {
+			if (NULL){
+				state = 2;
+				sub_state = 1;
 			}
 		}
 		else if (128 == state) {
