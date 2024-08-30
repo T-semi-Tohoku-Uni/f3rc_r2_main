@@ -72,7 +72,7 @@ float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[5] = {
-		{0, 0, 0, 0, 0, 0},//toppings 1
+		{0, 600, 0, 0, 0, 0},//toppings 1
 		{0, 0, 0, 0, 0, 0},//starting point
 		{0, 0, 0, 0, 0, 0},//toppings 2
 		{0, 0, 0, 0, 0, 0},//oke x
@@ -81,7 +81,7 @@ purpose mokuhyo[5] = {
 
 volatile float vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
-uint8_t state = 0;
+uint8_t state = 2;
 uint8_t sub_state = 0;
 uint8_t hantei_4 = 0;
 
@@ -226,7 +226,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		if (mv_state == state){
 			uint8_t m_state = sub_state;
 			float k_p = 0.001, k_i = 0, k_d = 0;
-			float k_p_t = 0.1, k_i_t = 0, k_d_t = 0;
+			float k_p_t = 1, k_i_t = 0, k_d_t = 0;
 			float hensax = mokuhyo[m_state].x - x;
 			float dx = (float)x - p_x;
 			mokuhyo[m_state].indx += hensax;
@@ -252,9 +252,16 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			//printf("%d\r\n", (int)(omega*100));
 		}
 		else if (kaishu_state == state) {
+			if (0 == sub_state){
 			vx = 0;
-			vy = 0.05;
+			vy = 0.01;
 			omega = 0;
+			}
+			else if (1 == sub_state) {
+				vx = -0.05;
+				vy = 0;
+				omega = 0;
+			}
 		}
 		else if (reset_state == state) {
 			if (0 == sub_state || 2 == sub_state || 4 == sub_state || 6 == sub_state){
@@ -339,6 +346,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 		}
+			//else
 		else if (3 == state) {
 			if (0 == sub_state){
 				if (t_3 > 10000) {
