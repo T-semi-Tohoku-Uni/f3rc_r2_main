@@ -259,20 +259,30 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			omega = 0;
 			}
 			else if (1 == sub_state) {
-				vx = -0.05;
+				vx = -0.01;
 				vy = 0;
 				omega = 0;
 			}
 		}
 		else if (reset_state == state) {
-			if (0 == sub_state || 2 == sub_state || 4 == sub_state || 6 == sub_state){
+			if (0 == sub_state){
 				vx = 0;
 				vy = 0.05;
 				omega = 0;
 			}
-			if (1 == sub_state || 3 == sub_state || 5 == sub_state) {
+			if (1 == sub_state) {
 				vx = 0.05;
 				vy = 0;
+				omega = 0;
+			}
+			if (2 == sub_state || 4 == sub_state) {
+				vx = 0;
+				vy = -0.05;
+				omega = 0;
+			}
+			if (3 == sub_state) {
+				vx = -0.1;
+				vy  = 0;
 				omega = 0;
 			}
 		}
