@@ -72,8 +72,8 @@ float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[5] = {
-		{0, 600, 0, 0, 0, 0},//toppings 1
-		{0, 0, 0, 0, 0, 0},//starting point
+		{0, 1360, 0, 0, 0, 0},//toppings 1
+		{0, 0, PI/2, 0, 0, 0},//starting point
 		{0, 0, 0, 0, 0, 0},//toppings 2
 		{0, 0, 0, 0, 0, 0},//oke x
 		{0, 0, 0, 0, 0, 0}//oke(dish)
