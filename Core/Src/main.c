@@ -48,9 +48,6 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-const uint8_t mv_state = 2, kaishu_state = 3, reset_state = 4;
-const int16_t state_id = 0x100, vel_id = 0x300;
-
 FDCAN_HandleTypeDef hfdcan1;
 
 TIM_HandleTypeDef htim6;
@@ -59,6 +56,8 @@ TIM_HandleTypeDef htim7;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+const uint8_t mv_state = 2, kaishu_state = 3, reset_state = 4;
+const int16_t state_id = 0x100, vel_id = 0x001;;
 FDCAN_TxHeaderTypeDef TxHeader;
 FDCAN_RxHeaderTypeDef RxHeader;
 FDCAN_FilterTypeDef sFilterConfig;
@@ -698,7 +697,7 @@ static void MX_TIM7_Init(void)
 
   /* USER CODE END TIM7_Init 1 */
   htim7.Instance = TIM7;
-  htim7.Init.Prescaler = 9;
+  htim7.Init.Prescaler = 999;
   htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim7.Init.Period = 7999;
   htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
