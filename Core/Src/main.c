@@ -299,6 +299,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			vy = 0;
 			omega = 0;
 		}
+		if (vx >= 0.2) {
+			vx = 0.2;
+		}
+		else if (vx <= -0.2) {
+			vx = -0.2;
+		}
+		if (vy >= 0.2) {
+			vy = 0.2;
+		}
+		else if (vy <= -0.2) {
+			vy = -0.2;
+		}
+		if (omega >= 0.5) {
+			omega = 0.5;
+		}
+		else if (omega <= -0.5) {
+			omega = -0.5;
+		}
 		int16_t vx_tusin = (int16_t)(vx * 1000);
 		int16_t vy_tusin = (int16_t)(vy * 1000);
 		int16_t omega_tusin = (int16_t)(omega * 400);
@@ -316,7 +334,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (1 == state) {
 			if (NULL) {
-				if (1000 <= t_1){
+				if (10 <= t_1){
 					if (NULL){
 						t_1 = 0;
 						state = 2;
@@ -374,7 +392,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			//else
 		else if (3 == state) {
 			if (0 == sub_state){
-				if (t_3 > 10000) {
+				if (t_3 > 100) {
 					t_3 = 0;
 					state = 4;
 					sub_state = 0;
@@ -384,7 +402,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 			else if (1 == sub_state) {
-				if (t_3 > 10000) {
+				if (t_3 > 100) {
 					t_3 = 0;
 					state = 4;
 					sub_state = 3;
@@ -454,7 +472,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (6 == state) {
 			if (0 == sub_state) {
-				if (t_6 > 5000) {
+				if (t_6 > 50) {
 					t_6 = 0;
 					state = 2;
 					sub_state = 3;
@@ -464,7 +482,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 			if (1 == sub_state) {
-				if (t_6 > 5000) {
+				if (t_6 > 50) {
 					t_6 = 0;
 					state = 128;
 					sub_state = 128;
@@ -545,8 +563,8 @@ int main(void)
 	  //printf("dy: %f\r\n",dy);
 	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
 	  //printf("%d\r\n", (int)(omega*100));
-	  printf("%d, %d(%d, %d, %f)\r\n", state, sub_state, x, y, theta);
-	  printf("\r\n");
+	  printf("%d, %d(%d, %d, %f)%d\r\n", state, sub_state, x, y, theta, t_3);
+	  //printf("\r\n");
 	  HAL_Delay(1);
   }
   /* USER CODE END 3 */
