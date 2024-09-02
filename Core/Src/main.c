@@ -71,12 +71,15 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[5] = {
-		{0, 1360, 0, 0, 0, 0},//toppings 1
-		{0, 0, PI/2, 0, 0, 0},//starting point
-		{0, 0, 0, 0, 0, 0},//toppings 2
-		{0, 0, 0, 0, 0, 0},//oke x
-		{0, 0, 0, 0, 0, 0}//oke(dish)
+purpose mokuhyo[8] = {
+		{-100, 1360, 0, 0, 0, 0},//toppings 1
+		{-100, 980, 0, 0, 0, 0},//oke y
+		{-1580, 980, PI/2, 0, 0, 0},// oke
+		{-1580/2, 980, PI/2, 0, 0, 0},//?
+		{-1580, 200, PI/2, 0, 0, 0},//?
+		{-1280, 100, PI/2, 0, 0, 0},//toppings 2
+		{-1580, 100, PI/2, 0, 0, 0},//oke x
+		{-1580, 980, PI/2, 0, 0, 0}//oke(dish)
 };
 
 volatile float vx = 0, vy = 0;//mm/ms
@@ -227,7 +230,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		if (mv_state == state){
 			uint8_t m_state = sub_state;
 			float k_p = 0.001, k_i = 0, k_d = 0;
-			float k_p_t = 1, k_i_t = 0, k_d_t = 0;
+			float k_p_t = 0.8, k_i_t = 0, k_d_t = 0;
 			float hensax = mokuhyo[m_state].x - x;
 			float dx = (float)x - p_x;
 			mokuhyo[m_state].indx += hensax;
@@ -255,11 +258,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		else if (kaishu_state == state) {
 			if (0 == sub_state){
 			vx = 0;
-			vy = 0.01;
+			vy = 0.05;
 			omega = 0;
 			}
 			else if (1 == sub_state) {
-				vx = -0.01;
+				vx = -0.05;
 				vy = 0;
 				omega = 0;
 			}
@@ -281,7 +284,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				omega = 0;
 			}
 			if (3 == sub_state) {
-				vx = -0.1;
+				vx = -0.05;
 				vy  = 0;
 				omega = 0;
 			}
@@ -330,7 +333,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 		}
 		else if (2 == state) {
-			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50)) && (fabsf(theta-mokuhyo[sub_state].theta < 0.1))){
+			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50)) && (fabsf(theta-mokuhyo[sub_state].theta < 0.01))){
 				if (0 == sub_state) {
 					state = 3;
 					sub_state = 0;
@@ -452,7 +455,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (6 == state) {
 			if (0 == sub_state) {
-				if (t_6 < 5000) {
+				if (t_6 > 5000) {
 					t_6 = 0;
 					state = 2;
 					sub_state = 3;
@@ -462,7 +465,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 			if (1 == sub_state) {
-				if (t_6 < 5000) {
+				if (t_6 > 5000) {
 					t_6 = 0;
 					state = 128;
 					sub_state = 128;
@@ -470,10 +473,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				else {
 					t_6++;
 				}
-			}
-			if (NULL) {//finish open
-				state = 128;
-				sub_state = 128;
 			}
 		}
 
@@ -547,7 +546,8 @@ int main(void)
 	  //printf("dy: %f\r\n",dy);
 	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
 	  //printf("%d\r\n", (int)(omega*100));
-	  printf("%d, %d\r\n", state, sub_state);
+	  printf("%d, %d(%d, %d, %f)\r\n", state, sub_state, x, y, theta);
+	  printf("\r\n");
 	  HAL_Delay(1);
   }
   /* USER CODE END 3 */
