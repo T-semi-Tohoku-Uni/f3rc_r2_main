@@ -423,31 +423,31 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (4 == state) {
 			if (0 == sub_state) {
-				if (1 == hantei_4){
+				if (0 == hantei_4){
 					state = 2;
 					sub_state = 1;
 				}
 			}
 			else if (1 == sub_state) {
-				if (1 == hantei_4) {
+				if (0 == hantei_4) {
 					state = 2;
 					sub_state = 2;
 				}
 			}
 			else if (2 == sub_state) {
-				if (1 == hantei_4) {
+				if (0 == hantei_4) {
 					state = 2;
 					sub_state = 5;
 				}
 			}
 			else if (3 == sub_state) {
-				if (1 == hantei_4) {
+				if (0 == hantei_4) {
 					state = 2;
 					sub_state = 6;
 				}
 			}
 			else if (4 == sub_state) {
-				if (1 == hantei_4) {
+				if (0 == hantei_4) {
 					state = 2;
 					sub_state = 7;
 				}
