@@ -300,6 +300,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			vy = 0;
 			omega = 0;
 		}
+		/*
 		if (vx >= 0.2) {
 			vx = 0.2;
 		}
@@ -317,7 +318,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (omega <= -0.5) {
 			omega = -0.5;
-		}
+		}*/
 		int16_t vx_tusin = (int16_t)(vx * 1000);
 		int16_t vy_tusin = (int16_t)(vy * 1000);
 		int16_t omega_tusin = (int16_t)(omega * 400);
@@ -569,7 +570,7 @@ int main(void)
 	  //printf("dy: %f\r\n",dy);
 	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
 	  //printf("%d\r\n", (int)(omega*100));
-	  printf("%d, %d(%d, %d, %f)%d\r\n", state, sub_state, x, y, theta, t_3);
+	  printf("%d, %d(%d, %d, %f)(%f, %f, %f)\r\n", state, sub_state, x, y, theta, vx, vy, omega);
 	  //printf("\r\n");
 	  HAL_Delay(1);
   }
