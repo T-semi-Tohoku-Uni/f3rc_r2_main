@@ -70,9 +70,10 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[8] = {
+purpose mokuhyo[9] = {
 		{-100, 1360, 0, 0, 0, 0},//toppings 1
-		{-100, 980, 0, 0, 0, 0},//oke y
+		{-100, 1500, PI/2, 0, 0, 0},//rotate
+		{-100, 980, PI/2, 0, 0, 0},//oke y
 		{-1580, 980, PI/2, 0, 0, 0},// oke
 		{-1580/2, 980, PI/2, 0, 0, 0},//?
 		{-1580, 200, PI/2, 0, 0, 0},//?
@@ -356,30 +357,34 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 					sub_state = 0;
 				}
 				else if (1 == sub_state) {
+					state = 2;
+					sub_state = 2;
+				}
+				else if (2 == sub_state) {
 					state = 4;
 					sub_state = 1;
 				}
-				else if (2 == sub_state) {
+				else if (3 == sub_state) {
 					state = 6;
 					sub_state = 0;
 				}
-				else if (3 == sub_state) {
-					state = 2;
-					sub_state = 4;
-				}
 				else if (4 == sub_state) {
+					state = 2;
+					sub_state = 5;
+				}
+				else if (5 == sub_state) {
 					state = 4;
 					sub_state = 2;
 				}
-				else if (5 == sub_state) {
+				else if (6 == sub_state) {
 					state = 3;
 					sub_state = 1;
 				}
-				else if (6 == sub_state) {
+				else if (7 == sub_state) {
 					state = 4;
 					sub_state = 4;
 				}
-				else if (7 == sub_state) {
+				else if (8 == sub_state) {
 					state = 6;
 					sub_state = 1;
 				}
