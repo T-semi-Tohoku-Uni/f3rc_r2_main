@@ -399,8 +399,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (0 == sub_state){
 				if (t_3 > 100) {
 					t_3 = 0;
-					state = 4;
-					sub_state = 0;
+					state = 2;
+					sub_state = 1;
 				}
 				else {
 					t_3++;
@@ -431,25 +431,26 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			else if (1 == sub_state) {
 				if (0 == hantei_4) {
 					state = 2;
-					sub_state = 2;
+					sub_state = 3;
 				}
 			}
 			else if (2 == sub_state) {
 				if (0 == hantei_4) {
 					state = 2;
-					sub_state = 5;
+					sub_state = 6;
 				}
 			}
 			else if (3 == sub_state) {
 				if (0 == hantei_4) {
 					state = 2;
-					sub_state = 6;
+					sub_state = 7;
 				}
 			}
 			else if (4 == sub_state) {
-				if (0 == hantei_4) {
+				if (0
+						== hantei_4) {
 					state = 2;
-					sub_state = 7;
+					sub_state = 8;
 				}
 			}
 /*			else if (5 == sub_state) {
@@ -480,7 +481,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				if (t_6 > 50) {
 					t_6 = 0;
 					state = 2;
-					sub_state = 3;
+					sub_state = 4;
 				}
 				else {
 					t_6++;
