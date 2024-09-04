@@ -70,12 +70,13 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[8] = {
+purpose mokuhyo[9] = {
 		{-100, 1360, 0, 0, 0, 0},//toppings 1
-		{-100, 980, 0, 0, 0, 0},//oke y
+		{-200, 1360, PI/2, 0, 0, 0},
+		{-200, 980, PI/2, 0, 0, 0},//oke y
 		{-1580, 980, PI/2, 0, 0, 0},// oke
 		{-1580/2, 980, PI/2, 0, 0, 0},//?
-		{-1580, 200, PI/2, 0, 0, 0},//?
+		{-1580/2, 200, PI/2, 0, 0, 0},//?
 		{-1280, 100, PI/2, 0, 0, 0},//toppings 2
 		{-1580, 100, PI/2, 0, 0, 0},//oke x
 		{-1580, 980, PI/2, 0, 0, 0}//oke(dish)
@@ -273,18 +274,13 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				omega = 0;
 			}
 			if (1 == sub_state) {
-				vx = 0.05;
-				vy = 0;
-				omega = 0;
-			}
-			if (2 == sub_state || 4 == sub_state) {
 				vx = 0;
 				vy = -0.05;
 				omega = 0;
 			}
-			if (3 == sub_state) {
-				vx = -0.05;
-				vy  = 0;
+			if (2 == sub_state) {
+				vx = 0;
+				vy = -0.05;
 				omega = 0;
 			}
 		}
@@ -357,29 +353,33 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 				else if (1 == sub_state) {
 					state = 4;
-					sub_state = 1;
+					sub_state = 0;
 				}
 				else if (2 == sub_state) {
+					state = 2;
+					sub_state = 3;
+				}
+				else if (3 == sub_state) {
 					state = 6;
 					sub_state = 0;
 				}
-				else if (3 == sub_state) {
-					state = 2;
-					sub_state = 4;
-				}
 				else if (4 == sub_state) {
-					state = 4;
-					sub_state = 2;
+					state = 2;
+					sub_state = 5;
 				}
 				else if (5 == sub_state) {
-					state = 3;
+					state = 4;
 					sub_state = 1;
 				}
 				else if (6 == sub_state) {
-					state = 4;
-					sub_state = 4;
+					state = 3;
+					sub_state = 1;
 				}
 				else if (7 == sub_state) {
+					state = 4;
+					sub_state = 2;
+				}
+				else if (8 == sub_state) {
 					state = 6;
 					sub_state = 1;
 				}
@@ -394,8 +394,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (0 == sub_state){
 				if (t_3 > 100) {
 					t_3 = 0;
-					state = 4;
-					sub_state = 0;
+					state = 2;
+					sub_state = 1;
 				}
 				else {
 					t_3++;
@@ -404,8 +404,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			else if (1 == sub_state) {
 				if (t_3 > 100) {
 					t_3 = 0;
-					state = 4;
-					sub_state = 3;
+					state = 2;
+					sub_state = 7;
 				}
 				else {
 					t_3++;
@@ -420,22 +420,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (0 == sub_state) {
 				if (1 == hantei_4){
 					state = 2;
-					sub_state = 1;
+					sub_state = 2;
 				}
 			}
 			else if (1 == sub_state) {
 				if (1 == hantei_4) {
 					state = 2;
-					sub_state = 2;
+					sub_state = 6;
 				}
 			}
 			else if (2 == sub_state) {
 				if (1 == hantei_4) {
 					state = 2;
-					sub_state = 5;
+					sub_state = 8;
 				}
 			}
-			else if (3 == sub_state) {
+/*			else if (3 == sub_state) {
 				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 6;
@@ -447,7 +447,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 					sub_state = 7;
 				}
 			}
-/*			else if (5 == sub_state) {
+			else if (5 == sub_state) {
 				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 3;
@@ -466,8 +466,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (5 == state) {
 			if (NULL) {//raspberry pi
-				state = 6;
-				sub_state = 0;
+				state = 128;
+				sub_state = 128;
 			}
 		}
 		else if (6 == state) {
@@ -475,7 +475,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				if (t_6 > 50) {
 					t_6 = 0;
 					state = 2;
-					sub_state = 3;
+					sub_state = 4;
 				}
 				else {
 					t_6++;
@@ -484,8 +484,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (1 == sub_state) {
 				if (t_6 > 50) {
 					t_6 = 0;
-					state = 128;
-					sub_state = 128;
+					state = 6;
+					sub_state = 1;
 				}
 				else {
 					t_6++;
