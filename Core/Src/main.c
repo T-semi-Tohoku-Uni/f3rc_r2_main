@@ -268,17 +268,22 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 		}
 		else if (reset_state == state) {
-			if (0 == sub_state){
+			if (0 == sub_state) {
+				vx = 0.05;
+				vy = 0;
+				omega = 0;
+			}
+			if (1 == sub_state){
 				vx = 0;
 				vy = 0.05;
 				omega = 0;
 			}
-			if (1 == sub_state) {
+			else if (2 == sub_state) {
 				vx = 0;
 				vy = -0.05;
 				omega = 0;
 			}
-			if (2 == sub_state) {
+			else if (3 == sub_state) {
 				vx = 0;
 				vy = -0.05;
 				omega = 0;
@@ -353,7 +358,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 				else if (1 == sub_state) {
 					state = 4;
-					sub_state = 0;
+					sub_state = 1;
 				}
 				else if (2 == sub_state) {
 					state = 2;
@@ -369,7 +374,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 				else if (5 == sub_state) {
 					state = 4;
-					sub_state = 1;
+					sub_state = 2;
 				}
 				else if (6 == sub_state) {
 					state = 3;
@@ -377,7 +382,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 				else if (7 == sub_state) {
 					state = 4;
-					sub_state = 2;
+					sub_state = 3;
 				}
 				else if (8 == sub_state) {
 					state = 6;
@@ -394,8 +399,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			if (0 == sub_state){
 				if (t_3 > 100) {
 					t_3 = 0;
-					state = 2;
-					sub_state = 1;
+					state = 4;
+					sub_state = 0;
 				}
 				else {
 					t_3++;
@@ -418,18 +423,25 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		}
 		else if (4 == state) {
 			if (0 == sub_state) {
+				if (1 == hantei_4) {
+					state = 2;
+					sub_state = 1;
+				}
+			}
+
+			else if (1 == sub_state) {
 				if (1 == hantei_4){
 					state = 2;
 					sub_state = 2;
 				}
 			}
-			else if (1 == sub_state) {
+			else if (2 == sub_state) {
 				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 6;
 				}
 			}
-			else if (2 == sub_state) {
+			else if (3 == sub_state) {
 				if (1 == hantei_4) {
 					state = 2;
 					sub_state = 8;
