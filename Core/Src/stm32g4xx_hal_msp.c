@@ -114,7 +114,7 @@ void HAL_FDCAN_MspInit(FDCAN_HandleTypeDef* hfdcan)
     PA11     ------> FDCAN1_RX
     PA12     ------> FDCAN1_TX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_11|GPIO_PIN_12;
+    GPIO_InitStruct.Pin = A11_Pin|A12_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -153,7 +153,7 @@ void HAL_FDCAN_MspDeInit(FDCAN_HandleTypeDef* hfdcan)
     PA11     ------> FDCAN1_RX
     PA12     ------> FDCAN1_TX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_11|GPIO_PIN_12);
+    HAL_GPIO_DeInit(GPIOA, A11_Pin|A12_Pin);
 
     /* FDCAN1 interrupt DeInit */
     HAL_NVIC_DisableIRQ(FDCAN1_IT0_IRQn);
@@ -276,7 +276,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef* huart)
     PA2     ------> USART2_TX
     PA3     ------> USART2_RX
     */
-    GPIO_InitStruct.Pin = GPIO_PIN_2|GPIO_PIN_3;
+    GPIO_InitStruct.Pin = GPIO_PIN_2|A3_Pin;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
@@ -310,7 +310,7 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* huart)
     PA2     ------> USART2_TX
     PA3     ------> USART2_RX
     */
-    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_2|GPIO_PIN_3);
+    HAL_GPIO_DeInit(GPIOA, GPIO_PIN_2|A3_Pin);
 
   /* USER CODE BEGIN USART2_MspDeInit 1 */
 

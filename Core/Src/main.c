@@ -70,26 +70,28 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[9] = {
+purpose mokuhyo[10] = {
 		{-100, 1360, 0, 0, 0, 0},//toppings 1
-		{-200, 1360, PI/2, 0, 0, 0},
-		{-200, 980, PI/2, 0, 0, 0},//oke y
-		{-1580, 980, PI/2, 0, 0, 0},// oke
-		{-1580/2, 980, PI/2, 0, 0, 0},//?
-		{-1580/2, 200, PI/2, 0, 0, 0},//?
-		{-1280, 100, PI/2, 0, 0, 0},//toppings 2
-		{-1580, 100, PI/2, 0, 0, 0},//oke x
-		{-1580, 980, PI/2, 0, 0, 0}//oke(dish)
+		{-110, 1360, PI/2, 0, 0, 0},//
+		{-150, 990, PI/2, 0, 0, 0},//oke y
+		{-1760, 1100, PI/2, 0, 0, 0},// oke
+		{-1570/2, 980, PI/2, 0, 0, 0},//?
+		{-1570/2, 100, PI/2, 0, 0, 0},//?
+		{-1280, 60, PI/2, 0, 0, 0},//toppings 2
+		{-1450, 80, PI/2, 0, 0, 0},//oke x
+		{-1450, 990, PI/2, 0, 0, 0},//oke x y
+		{-1760, 980, PI/2, 0, 0, 0}//oke(dish)
 };
 
 volatile float vx = 0, vy = 0;//mm/ms
 volatile float omega = 0;
-uint8_t state = 2;
+uint8_t state = 0;
 uint8_t sub_state = 0;
 uint8_t hantei_4 = 0;
 
 uint16_t t_1 = 0;
 uint16_t t_3 = 0;
+uint16_t t_2 = 0;
 uint16_t t_6 = 0;
 /* USER CODE END PV */
 
@@ -178,7 +180,7 @@ void FDCAN_RxTxSettings(void){
 	}
 }
 
-void state_Rx(int8_t st, uint8_t sub_st){
+void state_Tx(int8_t st, uint8_t sub_st){
 	TxHeader.Identifier = state_id;
 	uint8_t TxData_state[8] = {};
 	TxData_state[0] = st;
@@ -190,7 +192,7 @@ void state_Rx(int8_t st, uint8_t sub_st){
 	}
 }
 
-void vel_Rx(int16_t V_X, int16_t V_Y, int16_t Omega){
+void vel_Tx(int16_t V_X, int16_t V_Y, int16_t Omega){
 	TxHeader.Identifier = vel_id;
 	uint8_t TxData_vel[8] = {};
 
@@ -230,7 +232,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		if (mv_state == state){
 			uint8_t m_state = sub_state;
 			float k_p = 0.001, k_i = 0, k_d = 0;
-			float k_p_t = 0.8, k_i_t = 0, k_d_t = 0;
+			float k_p_t = 1, k_i_t = 0, k_d_t = 0;
 			float hensax = mokuhyo[m_state].x - x;
 			float dx = (float)x - p_x;
 			mokuhyo[m_state].indx += hensax;
@@ -275,7 +277,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 			if (1 == sub_state){
 				vx = 0;
-				vy = 0.05;
+				vy = -0.5;
 				omega = 0;
 			}
 			else if (2 == sub_state) {
@@ -321,26 +323,24 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		int16_t vx_tusin = (int16_t)(vx * 1000);
 		int16_t vy_tusin = (int16_t)(vy * 1000);
 		int16_t omega_tusin = (int16_t)(omega * 400);
-		vel_Rx(vx_tusin, vy_tusin, omega_tusin);
+		vel_Tx(vx_tusin, vy_tusin, omega_tusin);
 
 	}
 
 	if (&htim7 == htim) {
 		if (0 == state) {
-			if (NULL){
+			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(sw_start_GPIO_Port,sw_start_Pin)){
 				//switch
 				state = 1;
 				sub_state = 0;
 			}
 		}
 		else if (1 == state) {
-			if (NULL) {
+			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(sw_start_GPIO_Port,sw_start_Pin)) {
 				if (10 <= t_1){
-					if (NULL){
-						t_1 = 0;
-						state = 2;
-						sub_state = 0;
-					}
+					t_1 = 0;
+					state = 2;
+					sub_state = 0;
 				}
 				else {
 					t_1++;
@@ -351,7 +351,8 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 		}
 		else if (2 == state) {
-			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50)) && (fabsf(theta-mokuhyo[sub_state].theta < 0.01))){
+			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50) && (fabsf(theta-mokuhyo[sub_state].theta < 0.01))) || (t_2 >= 300)){
+				t_2 = 0;
 				if (0 == sub_state) {
 					state = 3;
 					sub_state = 0;
@@ -385,19 +386,27 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 					sub_state = 3;
 				}
 				else if (8 == sub_state) {
+					state = 2;
+					sub_state = 9;
+				}
+				else if (9 == sub_state) {
 					state = 6;
 					sub_state = 1;
 				}
+
 				else {
 					state = 128;
 					sub_state = 128;
 				}
 			}
+			else {
+				t_2++;
+			}
 		}
 			//else
 		else if (3 == state) {
 			if (0 == sub_state){
-				if (t_3 > 100) {
+				if (t_3 > 130) {
 					t_3 = 0;
 					state = 4;
 					sub_state = 0;
@@ -407,7 +416,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 			else if (1 == sub_state) {
-				if (t_3 > 100) {
+				if (t_3 > 150) {
 					t_3 = 0;
 					state = 2;
 					sub_state = 7;
@@ -447,30 +456,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 					sub_state = 8;
 				}
 			}
-/*			else if (3 == sub_state) {
-				if (1 == hantei_4) {
-					state = 2;
-					sub_state = 6;
-				}
-			}
-			else if (4 == sub_state) {
-				if (1 == hantei_4) {
-					state = 2;
-					sub_state = 7;
-				}
-			}
-			else if (5 == sub_state) {
-				if (1 == hantei_4) {
-					state = 2;
-					sub_state = 3;
-				}
-			}
-			else if (6 == sub_state) {
-				if (1 == hantei_4) {
-					state = 2;
-					sub_state = 4;
-				}
-			}*/
 			else {
 				state = 128;
 				sub_state = 128;
@@ -512,7 +497,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			state = 128;
 			sub_state = 128;
 		}
-		state_Rx(state, sub_state);
+		state_Tx(state, sub_state);
 	}
 }
 
@@ -566,6 +551,8 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  //HAL_GPIO_WritePin(B15_GPIO_Port, B15_Pin, GPIO_PIN_SET);
+  //HAL_GPIO_WritePin(A8_GPIO_Port, A8_Pin, GPIO_PIN_SET);
   while (1)
   {
     /* USER CODE END WHILE */
@@ -575,6 +562,227 @@ int main(void)
 	  //printf("dy: %f\r\n",dy);
 	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
 	  //printf("%d\r\n", (int)(omega*100));
+
+	  if (0 == sub_state) {
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (1 == sub_state) {
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (2 == sub_state) {
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (3 == sub_state) {
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (4 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (5 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (6 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (7 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (8 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+	  }
+	  else if (9 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (128 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+
+	  if (0 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (1 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+
+	  }
+	  else if (2 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (3 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (4 == state) {
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (5 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (6 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (7 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+
+
+	  }
+	  else if (8 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+	  }
+	  else if (9 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (128 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
+	  }
 	  printf("%d, %d(%d, %d, %f)%d\r\n", state, sub_state, x, y, theta, t_3);
 	  //printf("\r\n");
 	  HAL_Delay(1);
@@ -807,11 +1015,55 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, C1_Pin|C2_Pin|C3_Pin|C4_Pin
+                          |C11_Pin|C12_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, B11_Pin|B12_Pin|B13_Pin|B14_Pin
+                          |B15_Pin|B7_Pin|B8_Pin|B9_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, A8_Pin|A9_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Boad_LED_GPIO_Port, Boad_LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : C1_Pin C2_Pin C3_Pin C4_Pin
+                           C11_Pin C12_Pin */
+  GPIO_InitStruct.Pin = C1_Pin|C2_Pin|C3_Pin|C4_Pin
+                          |C11_Pin|C12_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : B11_Pin B12_Pin B13_Pin B14_Pin
+                           B15_Pin B7_Pin B8_Pin B9_Pin */
+  GPIO_InitStruct.Pin = B11_Pin|B12_Pin|B13_Pin|B14_Pin
+                          |B15_Pin|B7_Pin|B8_Pin|B9_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : sw_start_Pin */
+  GPIO_InitStruct.Pin = sw_start_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(sw_start_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : A8_Pin A9_Pin */
+  GPIO_InitStruct.Pin = A8_Pin|A9_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Boad_LED_Pin */
   GPIO_InitStruct.Pin = Boad_LED_Pin;
