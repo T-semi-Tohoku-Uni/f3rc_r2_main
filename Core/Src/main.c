@@ -71,16 +71,16 @@ float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[11] = {
-		{-100, 1360, 0, 0, 0, 0},//toppings 1
+		{-100, 1344, 0, 0, 0, 0},//toppings 1
 		{-110, 1360, PI/2, 0, 0, 0},//
-		{-272, 990, PI/2, 0, 0, 0},//oke y
-		{-1760, 1100, PI/2, 0, 0, 0},// oke
-		{-1570/2, 980, PI/2, 0, 0, 0},//?
-		{-1570/2, 100, PI/2, 0, 0, 0},//?
-		{-1400, 60, PI/2, 0, 0, 0},//toppings 2
-		{-1450, 80, PI/2, 0, 0, 0},//oke x
-		{-1450, 990, PI/2, 0, 0, 0},//oke x y
-		{-1760, 980, PI/2, 0, 0, 0}//oke(dish)
+		{-800, 922, PI/2, 0, 0, 0},//oke y
+		{-1700, 1022, PI/2, 0, 0, 0},// oke
+		{-1582/2, 980, PI/2, 0, 0, 0},//?
+		{-1582/2, 50, PI/2, 0, 0, 0},//?
+		{-1382, 60, PI/2, 0, 0, 0},//toppings 2
+		{-1400, 80, PI/2, 0, 0, 0},//oke x
+		{-1400, 920, PI/2, 0, 0, 0},//oke x y
+		{-1700, 922, PI/2, 0, 0, 0}//oke(dish)
 };
 
 volatile float vx = 0, vy = 0;//mm/ms
@@ -266,7 +266,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			omega = 0;
 			}
 			else if (1 == sub_state) {
-				vx = -0.05;
+				vx = -0.075;
 				vy = 0;
 				omega = 0;
 			}
@@ -278,7 +278,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				omega = 0;
 			}
 			if (1 == sub_state){
-				vx = -0.1;
+				vx = -0.15;
 				vy = -0.5;
 				omega = 0;
 			}
@@ -304,17 +304,17 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			vy = 0;
 			omega = 0;
 		}
-		if (vx >= 0.2) {
-			vx = 0.2;
+		if (vx >= 0.4) {
+			vx = 0.4;
 		}
-		else if (vx <= -0.2) {
-			vx = -0.2;
+		else if (vx <= -0.4) {
+			vx = -0.4;
 		}
-		if (vy >= 0.2) {
-			vy = 0.2;
+		if (vy >= 0.4) {
+			vy = 0.4;
 		}
-		else if (vy <= -0.2) {
-			vy = -0.2;
+		else if (vy <= -0.4) {
+			vy = -0.4;
 		}
 		if (omega >= 0.5) {
 			omega = 0.5;
@@ -353,7 +353,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 		}
 		else if (2 == state) {
-			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50) && (fabsf(theta-mokuhyo[sub_state].theta) < 0.01)) || (t_2 >= 300)){
+			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50) && (fabsf(theta-mokuhyo[sub_state].theta) < 0.03)) || (t_2 >= 100)){
 				t_2 = 0;
 				if (0 == sub_state) {
 					state = 3;
@@ -408,7 +408,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			//else
 		else if (3 == state) {
 			if (0 == sub_state){
-				if (t_3 > 130) {
+				if (t_3 > 100) {
 					t_3 = 0;
 					state = 4;
 					sub_state = 0;
@@ -481,7 +481,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 			if (1 == sub_state) {
-				if (t_6 > 50) {
+				if (t_6 > 1) {
 					t_6 = 0;
 					state = 6;
 					sub_state = 1;
