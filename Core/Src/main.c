@@ -70,14 +70,14 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[10] = {
+purpose mokuhyo[11] = {
 		{-100, 1360, 0, 0, 0, 0},//toppings 1
 		{-110, 1360, PI/2, 0, 0, 0},//
-		{-150, 990, PI/2, 0, 0, 0},//oke y
+		{-272, 990, PI/2, 0, 0, 0},//oke y
 		{-1760, 1100, PI/2, 0, 0, 0},// oke
 		{-1570/2, 980, PI/2, 0, 0, 0},//?
 		{-1570/2, 100, PI/2, 0, 0, 0},//?
-		{-1280, 60, PI/2, 0, 0, 0},//toppings 2
+		{-1400, 60, PI/2, 0, 0, 0},//toppings 2
 		{-1450, 80, PI/2, 0, 0, 0},//oke x
 		{-1450, 990, PI/2, 0, 0, 0},//oke x y
 		{-1760, 980, PI/2, 0, 0, 0}//oke(dish)
@@ -93,6 +93,8 @@ uint16_t t_1 = 0;
 uint16_t t_3 = 0;
 uint16_t t_2 = 0;
 uint16_t t_6 = 0;
+
+float diffx = 0, diffy = 0, difft = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -276,7 +278,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				omega = 0;
 			}
 			if (1 == sub_state){
-				vx = 0;
+				vx = -0.1;
 				vy = -0.5;
 				omega = 0;
 			}
@@ -351,7 +353,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 		}
 		else if (2 == state) {
-			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50) && (fabsf(theta-mokuhyo[sub_state].theta < 0.01))) || (t_2 >= 300)){
+			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50) && (fabsf(theta-mokuhyo[sub_state].theta) < 0.01)) || (t_2 >= 300)){
 				t_2 = 0;
 				if (0 == sub_state) {
 					state = 3;
@@ -752,8 +754,6 @@ int main(void)
 		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
 		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
 		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
-
-
 	  }
 	  else if (8 == state) {
 		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
@@ -783,9 +783,15 @@ int main(void)
 		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
 		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
 	  }
-	  printf("%d, %d(%d, %d, %f)%d\r\n", state, sub_state, x, y, theta, t_3);
+	  //printf("%d, %d(%d, %d, %f)%d\r\n", state, sub_state, x, y, theta, t_3);
 	  //printf("\r\n");
-	  HAL_Delay(1);
+	  if (2 == state) {
+		  diffx = x-mokuhyo[sub_state].x;
+		  diffy = y-mokuhyo[sub_state].y;
+		  difft = theta-mokuhyo[sub_state].theta;
+		  printf("%f, %f, %f\r\n", diffx, diffy, difft);
+	  }
+	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
