@@ -71,7 +71,7 @@ float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
 purpose mokuhyo[11] = {
-		{-100, 1344, 0, 0, 0, 0},//toppings 1
+		{-100, 1360, 0, 0, 0, 0},//toppings 1
 		{-110, 1360, PI/2, 0, 0, 0},//
 		{-800, 922, PI/2, 0, 0, 0},//oke y
 		{-2100, 1022, PI/2, 0, 0, 0},// oke
@@ -289,7 +289,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 			else if (3 == sub_state) {
 				vx = 0;
-				vy = -0.05;
+				vy = -0.1;
 				omega = 0;
 			}
 		}
