@@ -74,13 +74,13 @@ purpose mokuhyo[11] = {
 		{-100, 1344, 0, 0, 0, 0},//toppings 1
 		{-110, 1360, PI/2, 0, 0, 0},//
 		{-800, 922, PI/2, 0, 0, 0},//oke y
-		{-1800, 1022, PI/2, 0, 0, 0},// oke
+		{-2100, 1022, PI/2, 0, 0, 0},// oke
 		{-1582/2, 980, PI/2, 0, 0, 0},//?
 		{-1582/2, 50, PI/2, 0, 0, 0},//?
 		{-1382, 60, PI/2, 0, 0, 0},//toppings 2
 		{-1400, 80, PI/2, 0, 0, 0},//oke x
 		{-1400, 920, PI/2, 0, 0, 0},//oke x y
-		{-1700, 922, PI/2, 0, 0, 0}//oke(dish)
+		{-2100, 922, PI/2, 0, 0, 0}//oke(dish)
 };
 
 volatile float vx = 0, vy = 0;//mm/ms
@@ -262,7 +262,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 		else if (kaishu_state == state) {
 			if (0 == sub_state){
 			vx = 0;
-			vy = 0.05;
+			vy = 0.075;
 			omega = 0;
 			}
 			else if (1 == sub_state) {
@@ -284,7 +284,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			}
 			else if (2 == sub_state) {
 				vx = 0;
-				vy = -0.05;
+				vy = -0.1;
 				omega = 0;
 			}
 			else if (3 == sub_state) {
@@ -481,7 +481,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 				}
 			}
 			if (1 == sub_state) {
-				if (t_6 > 1) {
+				if (t_6 > 50) {
 					t_6 = 0;
 					state = 6;
 					sub_state = 1;
