@@ -70,7 +70,7 @@ int16_t x = 0, y = 0;
 float theta = 0;
 
 float p_x = 0, p_y = 0, p_t = 0;
-purpose mokuhyo[11] = {
+purpose mokuhyo[10] = {
 		{-100, 1360, 0, 0, 0, 0},//toppings 1
 		{-110, 1360, PI/2, 0, 0, 0},//
 		{-800, 922, PI/2, 0, 0, 0},//oke y
