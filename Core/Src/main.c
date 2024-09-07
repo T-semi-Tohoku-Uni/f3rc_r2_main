@@ -74,7 +74,7 @@ purpose mokuhyo[11] = {
 		{-100, 1344, 0, 0, 0, 0},//toppings 1
 		{-110, 1360, PI/2, 0, 0, 0},//
 		{-800, 922, PI/2, 0, 0, 0},//oke y
-		{-1700, 1022, PI/2, 0, 0, 0},// oke
+		{-1800, 1022, PI/2, 0, 0, 0},// oke
 		{-1582/2, 980, PI/2, 0, 0, 0},//?
 		{-1582/2, 50, PI/2, 0, 0, 0},//?
 		{-1382, 60, PI/2, 0, 0, 0},//toppings 2
@@ -408,7 +408,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 			//else
 		else if (3 == state) {
 			if (0 == sub_state){
-				if (t_3 > 100) {
+				if (t_3 > 130) {
 					t_3 = 0;
 					state = 4;
 					sub_state = 0;
