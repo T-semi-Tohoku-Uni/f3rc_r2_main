@@ -22,16 +22,24 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdio.h>
+#include <math.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct{
+	volatile int16_t x;
+	volatile int16_t y;
+	volatile float theta;
+	volatile float indx;
+	volatile float indy;
+	volatile float indt;
+}purpose;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PI 3.1415
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,10 +51,13 @@
 FDCAN_HandleTypeDef hfdcan1;
 
 TIM_HandleTypeDef htim6;
+TIM_HandleTypeDef htim7;
 
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+const uint8_t mv_state = 2, kaishu_state = 3, reset_state = 4;
+const int16_t state_id = 0x100, vel_id = 0x001;;
 FDCAN_TxHeaderTypeDef TxHeader;
 FDCAN_RxHeaderTypeDef RxHeader;
 FDCAN_FilterTypeDef sFilterConfig;
@@ -57,6 +68,33 @@ uint32_t TxMailbox;
 
 int16_t x = 0, y = 0;
 float theta = 0;
+
+float p_x = 0, p_y = 0, p_t = 0;
+purpose mokuhyo[11] = {
+		{-100, 1344, 0, 0, 0, 0},//toppings 1
+		{-110, 1360, PI/2, 0, 0, 0},//
+		{-800, 922, PI/2, 0, 0, 0},//oke y
+		{-1700, 1022, PI/2, 0, 0, 0},// oke
+		{-1582/2, 980, PI/2, 0, 0, 0},//?
+		{-1582/2, 50, PI/2, 0, 0, 0},//?
+		{-1382, 60, PI/2, 0, 0, 0},//toppings 2
+		{-1400, 80, PI/2, 0, 0, 0},//oke x
+		{-1400, 920, PI/2, 0, 0, 0},//oke x y
+		{-1700, 922, PI/2, 0, 0, 0}//oke(dish)
+};
+
+volatile float vx = 0, vy = 0;//mm/ms
+volatile float omega = 0;
+uint8_t state = 0;
+uint8_t sub_state = 0;
+uint8_t hantei_4 = 0;
+
+uint16_t t_1 = 0;
+uint16_t t_3 = 0;
+uint16_t t_2 = 0;
+uint16_t t_6 = 0;
+
+float diffx = 0, diffy = 0, difft = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -65,16 +103,14 @@ static void MX_GPIO_Init(void);
 static void MX_FDCAN1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM6_Init(void);
+static void MX_TIM7_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if (htim == htim6){
 
-}
 
 void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs){
 	if ((RxFifo1ITs & FDCAN_IT_RX_FIFO1_NEW_MESSAGE) != RESET) {
@@ -87,17 +123,20 @@ void HAL_FDCAN_RxFifo1Callback(FDCAN_HandleTypeDef *hfdcan, uint32_t RxFifo1ITs)
 		}
 
 		if (RxHeader.Identifier == 0x400) {
+			//printf("canlive");
 			x = (int16_t)((RxData[0] << 8) | RxData[1]);
 			y = (int16_t)((RxData[2] << 8) | RxData[3]);
-			theta = (int8_t)RxData[6];
-			float theta_syf = (int16_t)((RxData[4] << 8) | RxData[5]);
-			theta_syf /= 10000;
-			if (theta >= 0) {
-				theta += theta_syf;
-			}
-			else {
-				theta -= theta_syf;
-			}
+			theta = (int16_t)((RxData[4] << 8) | RxData[5]);
+			hantei_4 = RxData[6];
+//			float theta_syf = (int16_t)((RxData[4] << 8) | RxData[5]);
+//			theta_syf /= 10000;
+//			if (theta >= 0) {
+//				theta += theta_syf;
+//			}
+//			else {
+//				theta -= theta_syf;
+//			}
+			theta /= 400;
 		}
 	}
 }
@@ -108,8 +147,8 @@ void FDCAN_RxTxSettings(void){
 	FDCAN_Filter_settings.FilterIndex = 0;
 	FDCAN_Filter_settings.FilterType = FDCAN_FILTER_RANGE;
 	FDCAN_Filter_settings.FilterConfig = FDCAN_FILTER_TO_RXFIFO1;
-	FDCAN_Filter_settings.FilterID1 = 0x200;
-	FDCAN_Filter_settings.FilterID2 = 0x500;
+	FDCAN_Filter_settings.FilterID1 = 0x000;
+	FDCAN_Filter_settings.FilterID2 = 0x600;
 
 	TxHeader.Identifier = 0x000;
 	TxHeader.IdType = FDCAN_STANDARD_ID;
@@ -140,6 +179,327 @@ void FDCAN_RxTxSettings(void){
 	if (HAL_FDCAN_ActivateNotification(&hfdcan1, FDCAN_IT_RX_FIFO1_NEW_MESSAGE, 0) != HAL_OK){
 		printf("fdcan_activatenotification is error\r\n");
 		Error_Handler();
+	}
+}
+
+void state_Tx(int8_t st, uint8_t sub_st){
+	TxHeader.Identifier = state_id;
+	uint8_t TxData_state[8] = {};
+	TxData_state[0] = st;
+	TxData_state[1] = sub_st;
+
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_state) != HAL_OK) {
+		printf("addmassage_state is error\r\n");
+		Error_Handler();
+	}
+}
+
+void vel_Tx(int16_t V_X, int16_t V_Y, int16_t Omega){
+	TxHeader.Identifier = vel_id;
+	uint8_t TxData_vel[8] = {};
+
+//	uint16_t Omega_syi;
+//	uint8_t Omega_se;
+//	if (Omega > 0){
+//		Omega_se = (int16_t)Omega;
+//		float Omega_syf = Omega - (int16_t)Omega;
+//		Omega_syi = (uint16_t)(Omega_syf*10000);
+//	}
+//	else{
+//		Omega_se = (int16_t)Omega;
+//		float Omega_k = -Omega;
+//		float Omega_syf = Omega_k - (int16_t)Omega_k;
+//		Omega_syi = (uint16_t)(Omega_syf*10000);
+//
+//	}
+
+
+	TxData_vel[0] = (int16_t)(V_X) >> 8;
+	TxData_vel[1] = (uint8_t)((int16_t)(V_X) & 0xff);
+	TxData_vel[2] = (int16_t)(V_Y) >> 8;
+	TxData_vel[3] = (uint8_t)((int16_t)(V_Y) & 0xff);
+	TxData_vel[4] = (int16_t)(Omega) >> 8;
+	TxData_vel[5] = (uint8_t)((int16_t)(Omega) & 0xff);
+	//TxData_vel[6] = Omega_se;
+	//printf("%d\r\n",TxData_vel[3]);
+
+	if (HAL_FDCAN_AddMessageToTxFifoQ(&hfdcan1, &TxHeader, TxData_vel) != HAL_OK){
+		printf("add_message_vel is error\r\n");
+		Error_Handler();
+	}
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if (&htim6 == htim) {
+		if (mv_state == state){
+			uint8_t m_state = sub_state;
+			float k_p = 0.001, k_i = 0, k_d = 0;
+			float k_p_t = 1, k_i_t = 0, k_d_t = 0;
+			float hensax = mokuhyo[m_state].x - x;
+			float dx = (float)x - p_x;
+			mokuhyo[m_state].indx += hensax;
+			vx = (k_p*hensax + k_i*mokuhyo[m_state].indx + k_d*dx);
+
+			p_x = x;
+
+			float hensay = mokuhyo[m_state].y -y;
+			float dy = (float)y - p_y;
+			mokuhyo[m_state].indy += hensay;
+			vy = (k_p*hensay + k_i*mokuhyo[m_state].indy + k_d*dy);
+			//int Dy=vy*1000;
+			//printf("dy:%d\r\n",Dy);
+
+			p_y = y;
+
+			float hensat = mokuhyo[m_state].theta - theta;
+			float dt = theta - p_t;
+			mokuhyo[m_state].indt += hensat;
+			omega =(k_p_t*hensat + k_i_t*mokuhyo[m_state].indt + k_d_t*dt);
+
+			p_t = theta;
+			//printf("%d\r\n", (int)(omega*100));
+		}
+		else if (kaishu_state == state) {
+			if (0 == sub_state){
+			vx = 0;
+			vy = 0.05;
+			omega = 0;
+			}
+			else if (1 == sub_state) {
+				vx = -0.075;
+				vy = 0;
+				omega = 0;
+			}
+		}
+		else if (reset_state == state) {
+			if (0 == sub_state) {
+				vx = 0.05;
+				vy = 0;
+				omega = 0;
+			}
+			if (1 == sub_state){
+				vx = -0.15;
+				vy = -0.5;
+				omega = 0;
+			}
+			else if (2 == sub_state) {
+				vx = 0;
+				vy = -0.05;
+				omega = 0;
+			}
+			else if (3 == sub_state) {
+				vx = 0;
+				vy = -0.05;
+				omega = 0;
+			}
+		}
+
+		else if (128 == state) {
+			vx = 0;
+			vy = 0;
+			omega = 0;
+		}
+		else{
+			vx = 0;
+			vy = 0;
+			omega = 0;
+		}
+		if (vx >= 0.4) {
+			vx = 0.4;
+		}
+		else if (vx <= -0.4) {
+			vx = -0.4;
+		}
+		if (vy >= 0.4) {
+			vy = 0.4;
+		}
+		else if (vy <= -0.4) {
+			vy = -0.4;
+		}
+		if (omega >= 0.5) {
+			omega = 0.5;
+		}
+		else if (omega <= -0.5) {
+			omega = -0.5;
+		}
+		int16_t vx_tusin = (int16_t)(vx * 1000);
+		int16_t vy_tusin = (int16_t)(vy * 1000);
+		int16_t omega_tusin = (int16_t)(omega * 400);
+		vel_Tx(vx_tusin, vy_tusin, omega_tusin);
+
+	}
+
+	if (&htim7 == htim) {
+		if (0 == state) {
+			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(sw_start_GPIO_Port,sw_start_Pin)){
+				//switch
+				state = 1;
+				sub_state = 0;
+			}
+		}
+		else if (1 == state) {
+			if (GPIO_PIN_RESET == HAL_GPIO_ReadPin(sw_start_GPIO_Port,sw_start_Pin)) {
+				if (10 <= t_1){
+					t_1 = 0;
+					state = 2;
+					sub_state = 0;
+				}
+				else {
+					t_1++;
+				}
+			}
+			else {
+				t_1++;
+			}
+		}
+		else if (2 == state) {
+			if (((fabsf(x-mokuhyo[sub_state].x) < 50) && (fabsf(y-mokuhyo[sub_state].y) < 50) && (fabsf(theta-mokuhyo[sub_state].theta) < 0.03)) || (t_2 >= 100)){
+				t_2 = 0;
+				if (0 == sub_state) {
+					state = 3;
+					sub_state = 0;
+				}
+				else if (1 == sub_state) {
+					state = 4;
+					sub_state = 1;
+				}
+				else if (2 == sub_state) {
+					state = 2;
+					sub_state = 3;
+				}
+				else if (3 == sub_state) {
+					state = 6;
+					sub_state = 0;
+				}
+				else if (4 == sub_state) {
+					state = 2;
+					sub_state = 5;
+				}
+				else if (5 == sub_state) {
+					state = 4;
+					sub_state = 2;
+				}
+				else if (6 == sub_state) {
+					state = 3;
+					sub_state = 1;
+				}
+				else if (7 == sub_state) {
+					state = 4;
+					sub_state = 3;
+				}
+				else if (8 == sub_state) {
+					state = 2;
+					sub_state = 9;
+				}
+				else if (9 == sub_state) {
+					state = 6;
+					sub_state = 1;
+				}
+
+				else {
+					state = 128;
+					sub_state = 128;
+				}
+			}
+			else {
+				t_2++;
+			}
+		}
+			//else
+		else if (3 == state) {
+			if (0 == sub_state){
+				if (t_3 > 100) {
+					t_3 = 0;
+					state = 4;
+					sub_state = 0;
+				}
+				else {
+					t_3++;
+				}
+			}
+			else if (1 == sub_state) {
+				if (t_3 > 150) {
+					t_3 = 0;
+					state = 2;
+					sub_state = 7;
+				}
+				else {
+					t_3++;
+				}
+			}
+			else {
+				state = 128;
+				sub_state = 128;
+			}
+		}
+		else if (4 == state) {
+			if (0 == sub_state) {
+				if (1 == hantei_4) {
+					state = 2;
+					sub_state = 1;
+				}
+			}
+
+			else if (1 == sub_state) {
+				if (1 == hantei_4){
+					state = 2;
+					sub_state = 2;
+				}
+			}
+			else if (2 == sub_state) {
+				if (1 == hantei_4) {
+					state = 2;
+					sub_state = 6;
+				}
+			}
+			else if (3 == sub_state) {
+				if (1 == hantei_4) {
+					state = 2;
+					sub_state = 8;
+				}
+			}
+			else {
+				state = 128;
+				sub_state = 128;
+			}
+		}
+		else if (5 == state) {
+			if (NULL) {//raspberry pi
+				state = 128;
+				sub_state = 128;
+			}
+		}
+		else if (6 == state) {
+			if (0 == sub_state) {
+				if (t_6 > 50) {
+					t_6 = 0;
+					state = 2;
+					sub_state = 4;
+				}
+				else {
+					t_6++;
+				}
+			}
+			if (1 == sub_state) {
+				if (t_6 > 1) {
+					t_6 = 0;
+					state = 6;
+					sub_state = 1;
+				}
+				else {
+					t_6++;
+				}
+			}
+		}
+
+		else if (128 == state) {
+			HAL_GPIO_WritePin(Boad_LED_GPIO_Port, Boad_LED_Pin, GPIO_PIN_SET);
+		}
+		else {
+			state = 128;
+			sub_state = 128;
+		}
+		state_Tx(state, sub_state);
 	}
 }
 
@@ -182,20 +542,256 @@ int main(void)
   MX_FDCAN1_Init();
   MX_USART2_UART_Init();
   MX_TIM6_Init();
+  MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
   printf("start\r\n");
   FDCAN_RxTxSettings();
   printf("can_main_start\r\n");
   HAL_TIM_Base_Start_IT(&htim6);
+  HAL_TIM_Base_Start_IT(&htim7);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  //HAL_GPIO_WritePin(B15_GPIO_Port, B15_Pin, GPIO_PIN_SET);
+  //HAL_GPIO_WritePin(A8_GPIO_Port, A8_Pin, GPIO_PIN_SET);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+	  //printf("x: %d,y: %d\r\n",x,y);
+	  //printf("dy: %f\r\n",dy);
+	  //printf("%d.%d\r\n", (int)vy, (int)(100*(vy-(int)vy)));
+	  //printf("%d\r\n", (int)(omega*100));
+
+	  if (0 == sub_state) {
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (1 == sub_state) {
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (2 == sub_state) {
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (3 == sub_state) {
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (4 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (5 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (6 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (7 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (8 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_SET);
+	  }
+	  else if (9 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (128 == sub_state) {
+		  HAL_GPIO_WritePin(B8_GPIO_Port, B8_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B9_GPIO_Port, B9_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C4_GPIO_Port, C4_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B7_GPIO_Port, B7_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C11_GPIO_Port, C11_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C12_GPIO_Port, C12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(A9_GPIO_Port, A9_Pin, GPIO_PIN_RESET);
+	  }
+
+	  if (0 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (1 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+
+	  }
+	  else if (2 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (3 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (4 == state) {
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (5 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (6 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (7 == state) {
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (8 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+	  }
+	  else if (9 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_SET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_SET);
+
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+	  }
+	  else if (128 == state) {
+		  HAL_GPIO_WritePin(B14_GPIO_Port, B14_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B12_GPIO_Port, B12_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B13_GPIO_Port, B13_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C1_GPIO_Port, C1_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C2_GPIO_Port, C2_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(C3_GPIO_Port, C3_Pin, GPIO_PIN_RESET);
+		  HAL_GPIO_WritePin(B11_GPIO_Port, B11_Pin, GPIO_PIN_RESET);
+	  }
+	  //printf("%d, %d(%d, %d, %f)%d\r\n", state, sub_state, x, y, theta, t_3);
+	  //printf("\r\n");
+	  if (2 == state) {
+		  diffx = x-mokuhyo[sub_state].x;
+		  diffy = y-mokuhyo[sub_state].y;
+		  difft = theta-mokuhyo[sub_state].theta;
+		  printf("%f, %f, %f\r\n", diffx, diffy, difft);
+	  }
+	  HAL_Delay(100);
   }
   /* USER CODE END 3 */
 }
@@ -328,6 +924,44 @@ static void MX_TIM6_Init(void)
 }
 
 /**
+  * @brief TIM7 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM7_Init(void)
+{
+
+  /* USER CODE BEGIN TIM7_Init 0 */
+
+  /* USER CODE END TIM7_Init 0 */
+
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM7_Init 1 */
+
+  /* USER CODE END TIM7_Init 1 */
+  htim7.Instance = TIM7;
+  htim7.Init.Prescaler = 999;
+  htim7.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim7.Init.Period = 7999;
+  htim7.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim7) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim7, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM7_Init 2 */
+
+  /* USER CODE END TIM7_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -387,11 +1021,55 @@ static void MX_GPIO_Init(void)
 /* USER CODE END MX_GPIO_Init_1 */
 
   /* GPIO Ports Clock Enable */
+  __HAL_RCC_GPIOC_CLK_ENABLE();
   __HAL_RCC_GPIOA_CLK_ENABLE();
+  __HAL_RCC_GPIOB_CLK_ENABLE();
   __HAL_RCC_GPIOD_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOC, C1_Pin|C2_Pin|C3_Pin|C4_Pin
+                          |C11_Pin|C12_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, B11_Pin|B12_Pin|B13_Pin|B14_Pin
+                          |B15_Pin|B7_Pin|B8_Pin|B9_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOA, A8_Pin|A9_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(Boad_LED_GPIO_Port, Boad_LED_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pins : C1_Pin C2_Pin C3_Pin C4_Pin
+                           C11_Pin C12_Pin */
+  GPIO_InitStruct.Pin = C1_Pin|C2_Pin|C3_Pin|C4_Pin
+                          |C11_Pin|C12_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : B11_Pin B12_Pin B13_Pin B14_Pin
+                           B15_Pin B7_Pin B8_Pin B9_Pin */
+  GPIO_InitStruct.Pin = B11_Pin|B12_Pin|B13_Pin|B14_Pin
+                          |B15_Pin|B7_Pin|B8_Pin|B9_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOB, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : sw_start_Pin */
+  GPIO_InitStruct.Pin = sw_start_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
+  HAL_GPIO_Init(sw_start_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pins : A8_Pin A9_Pin */
+  GPIO_InitStruct.Pin = A8_Pin|A9_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pin : Boad_LED_Pin */
   GPIO_InitStruct.Pin = Boad_LED_Pin;
